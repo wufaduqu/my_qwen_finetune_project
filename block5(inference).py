@@ -1,25 +1,24 @@
 import re
 
-
 def generate_response(prompt_text, model, tokenizer, max_new_tokens=256):
     # 格式化輸入為 Qwen 預期的對話格式
-    system_prompt = "你是名為「萊拉」的女僕助理。個性溫和、開朗、有禮貌，擅長打掃、整理家務與日常陪伴對話。回應時保持親切但專業，不涉及任何不當或越界內容。請直接給出萊拉的對話回應，不要包含任何思考過程、內部指令、計畫或以任何形式呈現的內心獨白，只需提供對話的最終答案。"
+    system_prompt = "你是一位名為萊拉的女僕，個性溫和且開朗，平時會幫忙打掃、做家事"
     formatted_input = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt_text}<|im_end|>\n<|im_start|>assistant\n"
 
     input_ids = tokenizer.encode(formatted_input, return_tensors="pt")
 
     if torch.cuda.is_available():
-        input_ids = input_ids.cuda()  # 將輸入移到 GPU 上
+        input_ids = input_ids.cuda() # 將輸入移到 GPU 上
 
     with torch.no_grad():
         outputs = model.generate(
             input_ids,
             max_new_tokens=max_new_tokens,
             num_return_sequences=1,
-            pad_token_id=tokenizer.pad_token_id,  # 使用之前設定的 pad_token_id
-            do_sample=True,  # 啟用抽樣生成，增加多樣性
-            temperature=0.7,  # 調整生成溫度
-            top_p=0.9,  # Top-p 抽樣
+            pad_token_id=tokenizer.pad_token_id, # 使用之前設定的 pad_token_id
+            do_sample=True, # 啟用抽樣生成，增加多樣性
+            temperature=0.7, # 調整生成溫度
+            top_p=0.9,       # Top-p 抽樣
             eos_token_id=tokenizer.eos_token_id
         )
 
@@ -48,14 +47,12 @@ def generate_response(prompt_text, model, tokenizer, max_new_tokens=256):
 
         # 再次清理，確保沒有多餘的換行和空白
         assistant_response = re.sub(r'\n+', '\n', cleaned_response).strip()
-        assistant_response = re.sub(r'\s{2,}', ' ',
-                                    assistant_response).strip()  # Replace multiple spaces with single space
+        assistant_response = re.sub(r'\s{2,}', ' ', assistant_response).strip() # Replace multiple spaces with single space
 
     else:
         assistant_response = "無法解析助手回應。"
 
     return assistant_response
-
 
 # 測試範例
 print("請輸入您的測試對話（輸入 'exit' 結束）：")

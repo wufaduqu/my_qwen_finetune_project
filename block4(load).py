@@ -7,12 +7,14 @@ import os
 base_model_name = "Qwen/Qwen3-0.6B"
 
 # 微調後的模型輸出路徑 (應與 TrainingArguments 中的 output_dir 一致)
-finetuned_model_path = "./qwen_finetuned"
+# 修正：LoRA 權重會儲存在 output_dir 下的特定子資料夾中。
+# 根據訓練程式碼，最終 LoRA adapter 儲存為 'final_qwen_lora_adapter'。
+finetuned_model_path = "./qwen_finetuned/final_qwen_lora_adapter" # <-- 這裡已修正路徑
 
 # 載入 Tokenizer
 test_tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 if test_tokenizer.pad_token is None:
-    test_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    test_tokenizer.add_special_tokens({'pad_token': '[PAD]'}) 
 
 # 載入基礎模型
 # 由於我們只保存了 LoRA 的權重，需要先載入基礎模型
@@ -31,7 +33,7 @@ if torch.cuda.is_available():
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
     quantization_config=bnb_config,
-    device_map="auto" if torch.cuda.is_available() else None
+    device_map="auto" if torch.cuda.is_available() else None # 自動分配到可用的裝置 (GPU 或 CPU)
 )
 
 # 載入 PEFT (LoRA) 權重
@@ -46,8 +48,10 @@ if os.path.exists(os.path.join(finetuned_model_path, "adapter_model.safetensors"
     model_to_test = PeftModel.from_pretrained(base_model, finetuned_model_path)
     print("LoRA 權重載入成功。")
 else:
-    print(f"在 '{finetuned_model_path}' 中找不到 LoRA 權重，嘗試直接載入模型。")
-    # 如果沒有 LoRA 權重，則直接使用基礎模型（或者如果 finetuned_model_path 是一個完整的模型保存點）
+    # 如果找不到 LoRA 權重，這表示路徑可能有誤，或者 LoRA 權重沒有被保存
+    # 在此範例中，應該要能找到 LoRA 權重，所以這個情況應該表示路徑有問題
+    print(f"錯誤：在 '{finetuned_model_path}' 中找不到 LoRA 權重。請確認路徑是否正確，或模型是否已成功微調並保存。")
+    print("將使用基礎模型進行推理 (未微調)。")
     model_to_test = base_model
 
 model_to_test.eval()

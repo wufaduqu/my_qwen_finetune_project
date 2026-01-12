@@ -2,6 +2,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from peft import LoraConfig, get_peft_model
 import torch
 from datasets import Dataset # 確保這裡導入了 Dataset
+import os # 導入 os 模組用於路徑操作
 
 # 定義模型名稱
 model_name = "Qwen/Qwen3-0.6B"
@@ -95,8 +96,9 @@ model.print_trainable_parameters()
 
 
 # 設定訓練參數
+output_dir = "./qwen_finetuned" # 定義輸出目錄
 training_args = TrainingArguments(
-    output_dir="./qwen_finetuned", # 輸出目錄
+    output_dir=output_dir, # 輸出目錄
     per_device_train_batch_size=2, # 每個裝置的訓練批量大小 (根據您的 GPU 記憶體調整)
     gradient_accumulation_steps=4, # 梯度累計步數
     learning_rate=2e-4, # 學習率
@@ -122,3 +124,8 @@ print("開始微調模型...")
 trainer.train()
 
 print("模型微調完成！")
+
+# 在訓練結束後保存最終的 LoRA adapter
+final_adapter_output_path = os.path.join(output_dir, "final_qwen_lora_adapter")
+trainer.save_model(final_adapter_output_path)
+print(f"最終 LoRA adapter 已保存到 '{final_adapter_output_path}'")
